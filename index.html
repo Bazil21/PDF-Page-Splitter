@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Split PDF</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: inline-block;
+            width: 150px;
+        }
+        #response {
+            margin-top: 20px;
+            padding: 10px;
+        }
+        .success {
+            color: green;
+        }
+        .error {
+            color: red;
+        }
+    </style>
+</head>
+<body>
+    <h1>Split PDF</h1>
+    <form id="splitPdfForm">
+        <div class="form-group">
+            <label>Page 1 Filename:</label>
+            <input type="text" name="filenames[]" required>
+        </div>
+        <div class="form-group">
+            <label>Page 2 Filename:</label>
+            <input type="text" name="filenames[]">
+        </div>
+        <div class="form-group">
+            <label>Page 3 Filename:</label>
+            <input type="text" name="filenames[]">
+        </div>
+        <div class="form-group">
+            <label>Page 4 Filename:</label>
+            <input type="text" name="filenames[]">
+        </div>
+        <div class="form-group">
+            <label>Page 5 Filename:</label>
+            <input type="text" name="filenames[]">
+        </div>
+        <div class="form-group">
+            <label>Upload PDF:</label>
+            <input type="file" id="pdfFile" accept="application/pdf" required>
+        </div>
+        <button type="submit">Split PDF</button>
+    </form>
+
+    <div id="response"></div>
+
+    <script>
+        document.getElementById('splitPdfForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const form = e.target;
+            const formData = new FormData();
+            const responseDiv = document.getElementById('response');
+            
+            // Show loading state
+            responseDiv.innerHTML = '<p>Processing...</p>';
+
+            // Get non-empty filenames
+            const filenames = Array.from(form.querySelectorAll('input[name="filenames[]"]'))
+                .map(input => input.value)
+                .filter(value => value.trim() !== '');
+
+            const pdfFile = document.getElementById('pdfFile').files[0];
+            
+            // Validate inputs
+            if (!pdfFile) {
+                responseDiv.innerHTML = '<p class="error">Please select a PDF file.</p>';
+                return;
+            }
+
+            if (filenames.length === 0) {
+                responseDiv.innerHTML = '<p class="error">Please provide at least one filename.</p>';
+                return;
+            }
+
+            formData.append('filenames', JSON.stringify(filenames));
+            formData.append('pdf', pdfFile);
+
+            try {
+                const response = await fetch('api.php', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    responseDiv.innerHTML = `
+                        <h2 class="success">Files Split Successfully</h2>
+                        <ul>
+                            ${result.files.map(file => `
+                                <li><a href="${file}" target="_blank">${file}</a></li>
+                            `).join('')}
+                        </ul>
+                    `;
+                } else {
+                    responseDiv.innerHTML = `<p class="error">Error: ${result.error}</p>`;
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                responseDiv.innerHTML = '<p class="error">An error occurred while processing the request.</p>';
+            }
+        });
+    </script>
+</body>
+</html>
